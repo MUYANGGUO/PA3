@@ -20,6 +20,7 @@
 void matrix_vector_mult(const int n, const double* A, const double* x, double* y)
 {
     // TODO
+    
 }
 
 // Calculates y = A*x for a n-by-m matrix A, a m-dimensional vector x
