@@ -14,13 +14,14 @@
 // my implementation:
 #include <iostream>
 #include <math.h>
+using namespace std;
 
 // Calculates y = A*x for a square n-by-n matrix A, and n-dimensional vectors x
 // and y
 void matrix_vector_mult(const int n, const double* A, const double* x, double* y)
 {
     // TODO
-    
+
 }
 
 // Calculates y = A*x for a n-by-m matrix A, a m-dimensional vector x
@@ -28,6 +29,14 @@ void matrix_vector_mult(const int n, const double* A, const double* x, double* y
 void matrix_vector_mult(const int n, const int m, const double* A, const double* x, double* y)
 {
     // TODO
+    for (int i = 0; i<n; i++){
+        y[i] = 0;
+
+        for (int j=0; j<m; j++){
+            y[i] += (A[i*m+j]*x[j]);
+        }
+    }
+
 }
 
 // implements the sequential jacobi method

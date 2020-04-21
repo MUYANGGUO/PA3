@@ -1,3 +1,6 @@
+# binary inputs
+*.bin
+
 # System files
 *.DS_Store
 *_MACOSX
