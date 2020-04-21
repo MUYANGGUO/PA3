@@ -3,7 +3,7 @@ CXX=mpic++
 #CCFLAGS=-Wall -g
 # activate for compiler optimizations:
 CCFLAGS=-Wall -O3
-LDFLAGS=
+LDFLAGS=-pthread
 
 # set up google test
 GTEST_DIR = ./gtest
