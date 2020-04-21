@@ -22,6 +22,8 @@ void matrix_vector_mult(const int n, const double* A, const double* x, double* y
 {
     // TODO
     for (int i = 0; i<n; i++){
+        y[i] = 0;
+
         for (int j=0; j<n; j++){
             y[i] += (A[i*n+j]*x[j]);
         }
@@ -34,6 +36,14 @@ void matrix_vector_mult(const int n, const double* A, const double* x, double* y
 void matrix_vector_mult(const int n, const int m, const double* A, const double* x, double* y)
 {
     // TODO
+    for (int i = 0; i<n; i++){
+        y[i] = 0;
+
+        for (int j=0; j<m; j++){
+            y[i] += (A[i*m+j]*x[j]);
+        }
+    }
+
 }
 
 // implements the sequential jacobi method
