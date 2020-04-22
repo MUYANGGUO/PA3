@@ -20,11 +20,57 @@
 /*
  * TODO: Implement your solutions here
  */
+#include<iostream>
+
+using namespace std;
 
 
 void distribute_vector(const int n, double* input_vector, double** local_vector, MPI_Comm comm)
 {
     // TODO
+
+    //Define the processors in the communicator in 2D grids (i,j)
+    //root processor is root zero (0,0)
+    int rank, size;
+    MPI_Comm_rank(comm,&rank);
+    MPI_Comm_size(comm,&size);
+    MPI_Comm col;
+    int remain_dims[2] = {true, false};
+    MPI_Cart_sub(comm,remain_dims,&col);
+
+    int q = sqrt(size);
+    //coords: i,j
+    int coord_i = rank / q;
+    int coord_j = rank % q;
+    //get local size, use block_decompose function
+    int local_size;
+    local_size = block_decompose(n,q,coord_i);
+    //distribute from root (0,0), to coord_j = 0, that is (i,0) first column
+    if (coord_j == 0){
+        int *sendcounts;
+        int *displs;
+        sendcounts = (int*)malloc(sizeof(int)*size);
+        displs=(int*)malloc(sizeof(int)*size);
+        //check: assign memory to local vector
+        *local_vector =  (double*)malloc(sizeof(double)*local_size);
+        //map the sendcouts, displs;
+        for (int i = 0; i<q;i++){
+            sendcounts[i] = block_decompose(n,q,i);
+            displs[i] = (i==0)? 0:(displs[i-1]+sendcounts[i-1]);
+        }
+
+        MPI_Scatterv(input_vector, sendcounts,displs,MPI_DOUBLE,*local_vector,local_size,MPI_DOUBLE,0,col);
+
+        free(sendcounts);
+        free(displs);
+
+
+        
+    }
+    MPI_Comm_free(&col);
+    return;
+
+    
 }
 
 
