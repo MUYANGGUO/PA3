@@ -55,7 +55,87 @@ void distributed_matrix_vector_mult(const int n, double* local_A, double* local_
 void distributed_jacobi(const int n, double* local_A, double* local_b, double* local_x,
                 MPI_Comm comm, int max_iter, double l2_termination)
 {
-    // TODO
+    //functions: MPI_Comm_rank, MPI_Cart_coords, MPI_Cart_rank
+
+    //get current&root rank and current&root position
+    int curRank, rootRank, diagRank;
+    int curPos[2], rootPos[2], diagPos[2];
+    rootPos[0] = 0, rootPos[1] = 0;
+    MPI_Comm_rank(comm, &curRank);
+    MPI_Cart_coords(comm, curRank, 2, curPos);
+    MPI_Cart_rank(comm, rootPos, &rootRank);
+
+    diagPos[0] = curPos[0], diagPos[1] = curPos[0];
+    MPI_Cart_rank(comm, DiagCoord, &DiagRank);
+
+    //splite mpi_comm into rows and cols
+    MPI_Comm comm_row, comm_col;
+    MPI_Comm_split(comm, curPos[0], curPos[1], &comm_row);
+    MPI_Comm_split(comm, curPos[1], curPos[0], &comm_col);
+
+    //get R and D
+    int num_row = block_decompose(n, comm_row);
+    int num_col = block_decompose(n, comm_col);
+
+    double* R = new double[num_row * num_col]();
+    double* D = new double[num_col]();
+    
+    getRD_jacobi(R, D, num_row, num_col, loacl_A,
+                curRank, diagRank, curPos, diagPos, comm_row, comm_col, comm);
+
+    //update x until it converges or reaches to max iteration
+    double* local_y = new double[num_col];
+
+    for (int i = 0; i < max_iter; i ++){
+        //calculate R*x
+        distributed_matrix_vector_mult(n, R, local_x, local_y, comm);
+        //update x in the first column
+        if (curPos[1] == 0){
+            for (int i = 0; i < num_col; i++){
+                local_x[i] = (local_b[i] - local_y[i])/D[i];
+            }
+        }
+
+        //detect termination using l2 norm
+        distributed_matrix_vector_mult(n, local_A, local_x, local_y, comm);
+        if (curPos[1] == 0){
+            
+        }
+    }
+
+}
+
+void getRD_jacobi(double* R, double* D, int num_row, int num_col, 
+                double* local_A, int curRank, int diagRank, 
+                int curPos[2], int diagPos[2],
+                MPI_Comm comm_row, MPI_Comm comm_col, MPI_Comm comm) 
+{
+    //generate D and R matrix, send it to the first column
+    if (curRank != diagRank){
+        //get R matrix
+        for (int i = 0; i < num_row * num_col; i++){
+            R[i] = local_A[i];
+        }
+    }else{
+        //get R matrix and D matrix
+        for (int i = 0; i < num_row * num_col; i++){
+            if (i % num_col == i / num_col){
+                D[i%num_col] = local_A[i];
+            }else{
+                R[i] = local_A[i];
+            }
+        }
+
+        //send D to the first processor in this row
+        int firstProcessorRank, firstProcessorPos[2] = { curPos[0], 0};
+        MPI_Cart_rank(comm, firstProcessorPos, &firstProcessorRank);
+        MPI_Send(D, num_col, MPI_DOUBLE, firstProcessorRank, 1, comm);
+    }
+
+    //receive D matrix if the currant processor is at the first column
+    if (curPos[1] == 0){
+        MPI_Recv(D, num_col, MPI_DOUBLE, diagRank, 1, comm, MPI_STATUS_IGNORE);  
+    }
 }
 
 
