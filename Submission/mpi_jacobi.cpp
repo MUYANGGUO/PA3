@@ -275,18 +275,23 @@ void getRD_jacobi(double* R, double* D, int num_row, int num_col,
                 MPI_Comm comm_row, MPI_Comm comm_col, MPI_Comm comm) 
 {
     //generate D and R matrix, send it to the first column
-    if (curRank != diagRank){
+    if (curPos[0] != curPos[1]){
         //get R matrix
-        for (int i = 0; i < num_row * num_col; i++){
-            R[i] = local_A[i];
+        for (int i = 0; i < num_row; i++){
+            for (int j = 0; j < num_col; j++){
+                R[i*num_col + j] = local_A[i * num_col + j];
+            }
         }
     }else{
         //get R matrix and D matrix
-        for (int i = 0; i < num_row * num_col; i++){
-            if (i % num_col == i / num_col){
-                D[i%num_col] = local_A[i];
-            }else{
-                R[i] = local_A[i];
+        for (int i = 0; i < num_row; i++){
+            for (int j = 0; j < num_col; j++){
+                if (i == j){
+                    D[i] = local_A[i * num_col + j];
+                    R[i * num_col + j] = 0;
+                }else{
+                    R[i * num_col + j] = local_A[i * num_col + j];
+                }
             }
         }
 
@@ -335,41 +340,48 @@ void distributed_jacobi(const int n, double* local_A, double* local_b, double* l
                 curRank, diagRank, curPos, diagPos, comm_row, comm_col, comm);
 
     //update x until it converges or reaches to max iteration
-    double* local_Rx = new double[num_col];
-    double* local_Ax = new double[num_col]; 
+    double* local_Rx = new double[num_row];
+    double* local_Ax = new double[num_row]; 
     double l2_norm_square, sub_l2_norm_square;
 
-    for (int i = 0; i < max_iter; i ++){
+    // initialization 
+    for (int i = 0; i < num_row; i++){
+        local_x[i] = 1;
+    }
+
+    for (int it = 0; it < max_iter; it++){//
         //calculate R*x and A*x
         distributed_matrix_vector_mult(n, R, local_x, local_Rx, comm);
         distributed_matrix_vector_mult(n, local_A, local_x, local_Ax, comm);
-
-        //update x in the first column
-        if (curPos[1] == 0){
-            for (int i = 0; i < num_col; i++){
-                local_x[i] = (local_b[i] - local_Rx[i])/D[i];
-            }
-        }
-
+        // if (curPos[1] == 0){
+        //     for (int i = 0; i < num_col; i++){
+        //         cout<<"The local "<<i <<" num is "<<local_Ax[i]<<endl;
+        //     }
+        // }
         //detect termination using l2 norm
         l2_norm_square = 0;
         sub_l2_norm_square = 0;
        
         if (curPos[1] == 0){
             //get sub l2_norm of this row
-            sub_l2_norm_square +=  pow(local_Ax[i] - local_b[i], 2);
+            for (int i = 0; i < num_row; i++){
+                sub_l2_norm_square +=  (local_Ax[i] - local_b[i])*(local_Ax[i] - local_b[i]);
+            }
         }
         MPI_Reduce(&sub_l2_norm_square, &l2_norm_square, 1, MPI_DOUBLE, MPI_SUM, 0, comm_col);
 
         MPI_Bcast(&l2_norm_square, 1, MPI_DOUBLE, rootRank, comm);
         if (sqrt(l2_norm_square) <= l2_termination) break;
+        else {
+            if (curPos[1] == 0){
+                for (int i = 0; i < num_col; i++){
+                    local_x[i] = (local_b[i] - local_Rx[i])/D[i];
+                }
+            }
+        }
+        
     }
-
-    
 }
-
-
-
 
 // wraps the distributed matrix vector multiplication
 void mpi_matrix_vector_mult(const int n, double* A,
