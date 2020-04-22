@@ -9,6 +9,6 @@ echo "\ncompiling...\n"
 make all
 echo "\nsequential testing...\n"
 ./seq_tests
-echo "\nmpi testings, np 1...\n"
-mpirun -np 1 ./mpi_tests
+echo "\nmpi testings, np 4...\n"
+mpirun -np 4 ./mpi_tests
 # echo "\ntesting mode, running testing cases... (not finished yet)\n"
