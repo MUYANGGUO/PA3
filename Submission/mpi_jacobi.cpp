@@ -84,25 +84,37 @@ void distributed_jacobi(const int n, double* local_A, double* local_b, double* l
                 curRank, diagRank, curPos, diagPos, comm_row, comm_col, comm);
 
     //update x until it converges or reaches to max iteration
-    double* local_y = new double[num_col];
+    double* local_Rx = new double[num_col];
+    double* local_Ax = new double[num_col]; 
+    double l2_norm_square, sub_l2_norm_square;
 
     for (int i = 0; i < max_iter; i ++){
-        //calculate R*x
-        distributed_matrix_vector_mult(n, R, local_x, local_y, comm);
+        //calculate R*x and A*x
+        distributed_matrix_vector_mult(n, R, local_x, local_Rx, comm);
+        distributed_matrix_vector_mult(n, local_A, local_x, local_Ax, comm);
+
         //update x in the first column
         if (curPos[1] == 0){
             for (int i = 0; i < num_col; i++){
-                local_x[i] = (local_b[i] - local_y[i])/D[i];
+                local_x[i] = (local_b[i] - local_Rx[i])/D[i];
             }
         }
 
         //detect termination using l2 norm
-        distributed_matrix_vector_mult(n, local_A, local_x, local_y, comm);
+        l2_norm_square = 0;
+        sub_l2_norm_square = 0;
+       
         if (curPos[1] == 0){
-            
+            //get sub l2_norm of this row
+            sub_l2_norm_square +=  pow(local_Ax[i] - local_b[i], 2);
         }
+        MPI_Reduce(&sub_l2_norm_square, &l2_norm_square, 1, MPI_DOUBLE, MPI_SUM, 0, col_comm);
+
+        MPI_Bcast(&l2_norm_square, 1, MPI_DOUBLE, rootRank, comm);
+        if (sqrt(l2_norm_square) <= l2_termination) break;
     }
 
+    
 }
 
 void getRD_jacobi(double* R, double* D, int num_row, int num_col, 
