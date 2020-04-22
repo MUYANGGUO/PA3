@@ -126,7 +126,7 @@ void distribute_matrix(const int n, double* input_matrix, double** local_matrix,
     MPI_Comm_rank(comm, &curRank);
     MPI_Cart_coords(comm, curRank, 2, curPos);
     
-    int totalProcessor, q
+    int totalProcessor, q;
     MPI_Comm_size(comm, &totalProcessor);
     q = (int) sqrt(totalProcessor);
     int cur_totalRows = block_decompose(n, q, curPos[0]);
