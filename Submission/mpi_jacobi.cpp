@@ -293,11 +293,13 @@ void getRD_jacobi(double* R, double* D, int num_row, int num_col,
         //send D to the first processor in this row
         int firstProcessorRank, firstProcessorPos[2] = { curPos[0], 0};
         MPI_Cart_rank(comm, firstProcessorPos, &firstProcessorRank);
-        MPI_Send(D, num_col, MPI_DOUBLE, firstProcessorRank, 1, comm);
+        if (curPos[0] != 0){
+            MPI_Send(D, num_col, MPI_DOUBLE, firstProcessorRank, 1, comm);
+        }
     }
 
     //receive D matrix if the currant processor is at the first column
-    if (curPos[1] == 0){
+    if (curPos[1] == 0 && curPos[0] != 0){
         MPI_Recv(D, num_col, MPI_DOUBLE, diagRank, 1, comm, MPI_STATUS_IGNORE);  
     }
 }
