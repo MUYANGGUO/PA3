@@ -63,10 +63,9 @@ void distribute_vector(const int n, double* input_vector, double** local_vector,
 
         free(sendcounts);
         free(displs);
-
-
-        
     }
+
+
     MPI_Comm_free(&col);
     return;
 
@@ -167,6 +166,8 @@ void distribute_matrix(const int n, double* input_matrix, double** local_matrix,
                     rec_buffer_curP + i * cur_totalCols, cur_totalCols, MPI_DOUBLE, 0, comm_row);
         
     }
+    *local_matrix = rec_buffer_curP;
+
     MPI_Barrier(comm_row);
     MPI_Comm_free(&comm_col);
     MPI_Comm_free(&comm_row);
@@ -244,6 +245,7 @@ void distributed_matrix_vector_mult(const int n, double* local_A, double* local_
     MPI_Comm_split(comm, coord_i,coord_j,&rows);
     MPI_Comm_split(comm, coord_j,coord_i,&cols);
 
+
     //calculate local matrix, m x n in terms of size and allocate memory acccordingly
     int local_m, local_n;
     local_m = block_decompose(n,rows);
@@ -253,6 +255,13 @@ void distributed_matrix_vector_mult(const int n, double* local_A, double* local_
     double *local_mv;
     local_mv = (double*)malloc(sizeof(double)*local_m);
     transpose_bcast_vector(n,local_x,local_mv,comm);
+
+    // cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_x "<<  " is "<< *(local_x+0)<<endl;
+    // if (coord_i == 0 && coord_j == 1){
+    //     for (int i = 0; i < 4; i++){
+    //         cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_A "<< i << " is "<< *(local_A+i)<<endl;
+    //     }
+    // }
 
     //after transposing, we then could calculate the y = A*x, denote as local_nv;
     double *local_nv;
@@ -332,6 +341,7 @@ void distributed_jacobi(const int n, double* local_A, double* local_b, double* l
     MPI_Comm_split(comm, curPos[0], curPos[1], &comm_row);
     MPI_Comm_split(comm, curPos[1], curPos[0], &comm_col);
 
+    cout<<"Every thing is ok before calculating R and D"<< endl;
     //get R and D
     int num_row = block_decompose(n, comm_row);
     int num_col = block_decompose(n, comm_col);
@@ -386,13 +396,13 @@ void mpi_matrix_vector_mult(const int n, double* A,
     // distribute the array onto local processors!
     double* local_A = NULL;
     double* local_x = NULL;
+    cout<<"distribute matrix"<< endl;
     distribute_matrix(n, &A[0], &local_A, comm);
     distribute_vector(n, &x[0], &local_x, comm);
-
+    cout<<"distribute vector success"<< endl;
     // allocate local result space
     double* local_y = new double[block_decompose_by_dim(n, comm, 0)];
     distributed_matrix_vector_mult(n, local_A, local_x, local_y, comm);
-
     // gather results back to rank 0
     gather_vector(n, local_y, y, comm);
 }
