@@ -109,8 +109,6 @@ void gather_vector(const int n, double* local_vector, double* output_vector, MPI
         free(recvcounts);
         free(displs);
 
-
-        
     }
     MPI_Comm_free(&col);
     return;    
@@ -177,54 +175,48 @@ void distribute_matrix(const int n, double* input_matrix, double** local_matrix,
 void transpose_bcast_vector(const int n, double* col_vector, double* row_vector, MPI_Comm comm)
 {
     // TODO
-    int rank, size;
-    MPI_Comm_rank(comm,&rank);
-    MPI_Comm_size(comm,&size);
+    // retrieve Cartesian topology information
+    int dimension[2];
+    int periods[2];
+    int coordinates[2];
+    MPI_Cart_get(comm, 2, dimension, periods, coordinates);
 
-    //get col, row from cart
-    MPI_Comm row, col;
-    int remain_dims_row[2] = {false, true};
-    int remain_dims_col[2] = {true, false};
-    MPI_Cart_sub(comm,remain_dims_row,&row);
-    MPI_Cart_sub(comm,remain_dims_col,&col);
-
-
-
-
-    int q = sqrt(size);
-    //coords: i,j
-    int coord_i = rank / q;
-    int coord_j = rank % q;
-    //get local size, use block_decompose function
-    int local_size;
-    local_size = block_decompose(n,q,coord_i);
-
-
-    //send col_vector to processor at each column's diagonal position
-    //meaning from each in first column (i,0), send to (i,i) respectively.
-    //And diagonal processors from (i,i) should receive it.
-    if (coord_j == 0){
-        int Scount = block_decompose_by_dim(n,comm,0);
-        MPI_Send(col_vector,Scount, MPI_DOUBLE,coord_i,coord_i,row);
-
+    // number of rows or columns
+    int m = dimension[0];
+    int num_rows = block_decompose(n, m, coordinates[0]);
+    int num_cols = block_decompose(n, m, coordinates[1]); 
+    
+    // send local data to diagonal processors from first column
+    // processor(0,0)
+    if (coordinates[0] == 0 && coordinates[1] == 0)
+    {
+        for (int i = 0; i < num_rows; i++) {
+            row_vector[i] = col_vector[i];
+        }
     }
-    if (coord_j == coord_i){
-        int Rcount = block_decompose_by_dim(n,comm,0);
-        MPI_Recv(row_vector,Rcount,MPI_DOUBLE,0,coord_i,row, MPI_STATUS_IGNORE);
+    // other processors in first column
+    else if (coordinates[1] == 0)
+    {
+        int diag_coordinates[] = {coordinates[0], coordinates[0]};
+        int diag_rank; 
+        MPI_Cart_rank(comm, diag_coordinates, &diag_rank);
+        MPI_Send(&col_vector[0], num_rows, MPI_DOUBLE, diag_rank, 1, comm);
     }
-    //sync this step, wait all finished send/recv
-    MPI_Barrier(comm);
-    //Start Broadcast
-    int Bcount = block_decompose_by_dim(n,comm,1);
-    MPI_Bcast(row_vector,Bcount,MPI_DOUBLE,coord_j,col);
-    //sync again after Bcast before free the memory
-    MPI_Barrier(comm);
+    // disgonal processors receive data
+    else if (coordinates[0] == coordinates[1])
+    {
+        int original_coordinates[] = {coordinates[0], 0};
+        int original_rank; 
+        MPI_Cart_rank(comm, original_coordinates, &original_rank);
+        MPI_Recv(&row_vector[0], num_rows, MPI_DOUBLE, original_rank, 1, comm, MPI_STATUS_IGNORE);
+    }
 
-    //free the memory
-    MPI_Comm_free(&col);
-    MPI_Comm_free(&row);
-    return;    
-
+    // diagonal processors distribute data along column
+    MPI_Comm column_comm;
+    MPI_Comm_split(comm, coordinates[1], coordinates[0], &column_comm);
+    MPI_Bcast(row_vector, num_cols, MPI_DOUBLE, coordinates[1], column_comm);
+    // release the comm
+    MPI_Comm_free(&column_comm);
 }
 
 
@@ -244,17 +236,17 @@ void distributed_matrix_vector_mult(const int n, double* local_A, double* local_
     MPI_Comm rows, cols;
     MPI_Comm_split(comm, coord_i,coord_j,&rows);
     MPI_Comm_split(comm, coord_j,coord_i,&cols);
-
+    
 
     //calculate local matrix, m x n in terms of size and allocate memory acccordingly
-    int local_m, local_n;
-    local_m = block_decompose(n,rows);
-    local_n = block_decompose(n,cols);
+    int local_rows, local_cols;
+    local_rows = block_decompose(n,rows);
+    local_cols = block_decompose(n,cols);
 
-    //transpose the local_x from (i,0) to every row
-    double *local_mv;
-    local_mv = (double*)malloc(sizeof(double)*local_m);
-    transpose_bcast_vector(n,local_x,local_mv,comm);
+    //transpose the local_x from (0,1) to every col
+    double *x_t;
+    x_t = (double*)malloc(sizeof(double)*local_rows);
+    transpose_bcast_vector(n,local_x, x_t,comm);
 
     // cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_x "<<  " is "<< *(local_x+0)<<endl;
     // if (coord_i == 0 && coord_j == 1){
@@ -264,27 +256,18 @@ void distributed_matrix_vector_mult(const int n, double* local_A, double* local_
     // }
 
     //after transposing, we then could calculate the y = A*x, denote as local_nv;
-    double *local_nv;
-    local_nv = (double*)malloc(sizeof(double)*local_n);
-    for (int i = 0; i<local_n;i++){
-        for (int j = 0; j<local_m;j++){
-            local_nv[i]+=local_A[local_n*i+j]*local_mv[j];
+    double *Ax;
+    Ax = (double*)malloc(sizeof(double)*local_rows);
+    for (int i = 0; i<local_rows;i++){
+        Ax[i] = 0;
+        for (int j = 0; j<local_cols;j++){
+            Ax[i]+=local_A[ local_cols * i + j] * x_t[j];
         }
     }
 
     //calculate local_y, by reducing
-    MPI_Reduce(&local_nv[0],&local_y[0],local_n,MPI_DOUBLE,MPI_SUM,0,rows);
-    free(local_nv);
-    free(local_mv);
-
-    MPI_Comm_free(&rows);
-    MPI_Comm_free(&cols);
-
-
-    return;
-
+    MPI_Reduce(Ax, local_y, local_rows, MPI_DOUBLE,MPI_SUM,0,rows);
 }
-
 
 void getRD_jacobi(double* R, double* D, int num_row, int num_col, 
                 double* local_A, int curRank, int diagRank, 
@@ -341,13 +324,12 @@ void distributed_jacobi(const int n, double* local_A, double* local_b, double* l
     MPI_Comm_split(comm, curPos[0], curPos[1], &comm_row);
     MPI_Comm_split(comm, curPos[1], curPos[0], &comm_col);
 
-    cout<<"Every thing is ok before calculating R and D"<< endl;
     //get R and D
     int num_row = block_decompose(n, comm_row);
     int num_col = block_decompose(n, comm_col);
 
-    double* R = new double[num_row * num_col]();
-    double* D = new double[num_col]();
+    double* R = new double[num_row * num_col];
+    double* D = new double[num_col];
     
     getRD_jacobi(R, D, num_row, num_col, local_A,
                 curRank, diagRank, curPos, diagPos, comm_row, comm_col, comm);
@@ -396,10 +378,8 @@ void mpi_matrix_vector_mult(const int n, double* A,
     // distribute the array onto local processors!
     double* local_A = NULL;
     double* local_x = NULL;
-    cout<<"distribute matrix"<< endl;
     distribute_matrix(n, &A[0], &local_A, comm);
     distribute_vector(n, &x[0], &local_x, comm);
-    cout<<"distribute vector success"<< endl;
     // allocate local result space
     double* local_y = new double[block_decompose_by_dim(n, comm, 0)];
     distributed_matrix_vector_mult(n, local_A, local_x, local_y, comm);
