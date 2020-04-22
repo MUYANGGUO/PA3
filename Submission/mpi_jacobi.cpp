@@ -181,6 +181,50 @@ void transpose_bcast_vector(const int n, double* col_vector, double* row_vector,
 void distributed_matrix_vector_mult(const int n, double* local_A, double* local_x, double* local_y, MPI_Comm comm)
 {
     // TODO
+    int rank, size;
+    MPI_Comm_rank(comm,&rank);
+    MPI_Comm_size(comm,&size);
+    
+    int q = sqrt(size);
+    //coords: i,j
+    int coord_i = rank / q;
+    int coord_j = rank % q;
+
+    //MPI Split Comm to rows and cols
+    MPI_Comm rows, cols;
+    MPI_Comm_split(comm, coord_i,coord_j,&rows);
+    MPI_Comm_split(comm, coord_j,coord_i,&cols);
+
+    //calculate local matrix, m x n in terms of size and allocate memory acccordingly
+    int local_m, local_n;
+    local_m = block_decompose(n,rows);
+    local_n = block_decompose(n,cols);
+
+    //transpose the local_x from (i,0) to every row
+    double *local_mv;
+    local_mv = (double*)malloc(sizeof(double)*local_m);
+    transpose_bcast_vector(n,local_x,local_mv,comm);
+
+    //after transposing, we then could calculate the y = A*x, denote as local_nv;
+    double *local_nv;
+    local_nv = (double*)malloc(sizeof(double)*local_n);
+    for (int i = 0; i<local_n;i++){
+        for (int j = 0; j<local_m;j++){
+            local_nv[i]+=local_A[local_n*i+j]*local_mv[j];
+        }
+    }
+
+    //calculate local_y, by reducing
+    MPI_Reduce(&local_nv[0],&local_y[0],local_n,MPI_DOUBLE,MPI_SUM,0,rows);
+    free(local_nv);
+    free(local_mv);
+
+    MPI_Comm_free(&rows);
+    MPI_Comm_free(&cols);
+
+
+    return;
+
 }
 
 // Solves Ax = b using the iterative jacobi method
