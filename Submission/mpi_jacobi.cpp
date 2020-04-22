@@ -127,6 +127,54 @@ void distribute_matrix(const int n, double* input_matrix, double** local_matrix,
 void transpose_bcast_vector(const int n, double* col_vector, double* row_vector, MPI_Comm comm)
 {
     // TODO
+    int rank, size;
+    MPI_Comm_rank(comm,&rank);
+    MPI_Comm_size(comm,&size);
+
+    //get col, row from cart
+    MPI_Comm row, col;
+    int remain_dims_row[2] = {false, true};
+    int remain_dims_col[2] = {true, false};
+    MPI_Cart_sub(comm,remain_dims_row,&row);
+    MPI_Cart_sub(comm,remain_dims_col,&col);
+
+
+
+
+    int q = sqrt(size);
+    //coords: i,j
+    int coord_i = rank / q;
+    int coord_j = rank % q;
+    //get local size, use block_decompose function
+    int local_size;
+    local_size = block_decompose(n,q,coord_i);
+
+
+    //send col_vector to processor at each column's diagonal position
+    //meaning from each in first column (i,0), send to (i,i) respectively.
+    //And diagonal processors from (i,i) should receive it.
+    if (coord_j == 0){
+        int Scount = block_decompose_by_dim(n,comm,0);
+        MPI_Send(col_vector,Scount, MPI_DOUBLE,coord_i,coord_i,row);
+
+    }
+    if (coord_j == coord_i){
+        int Rcount = block_decompose_by_dim(n,comm,0);
+        MPI_Recv(row_vector,Rcount,MPI_DOUBLE,0,coord_i,row, MPI_STATUS_IGNORE);
+    }
+    //sync this step, wait all finished send/recv
+    MPI_Barrier(comm);
+    //Start Broadcast
+    int Bcount = block_decompose_by_dim(n,comm,1);
+    MPI_Bcast(row_vector,Bcount,MPI_DOUBLE,coord_j,col);
+    //sync again after Bcast before free the memory
+    MPI_Barrier(comm);
+
+    //free the memory
+    MPI_Comm_free(&col);
+    MPI_Comm_free(&row);
+    return;    
+
 }
 
 
