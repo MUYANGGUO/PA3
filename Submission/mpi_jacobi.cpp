@@ -37,6 +37,55 @@ void gather_vector(const int n, double* local_vector, double* output_vector, MPI
 void distribute_matrix(const int n, double* input_matrix, double** local_matrix, MPI_Comm comm)
 {
     // TODO
+    //get information of current processor
+    int curRank, curPos[2];
+    MPI_Comm_rank(comm, &curRank);
+    MPI_Cart_coords(comm, curRank, 2, curPos);
+    
+    int totalProcessor, q
+    MPI_Comm_size(comm, &totalProcessor);
+    q = (int) sqrt(totalProcessor);
+    int cur_totalRows = block_decompose(n, q, curPos[0]);
+    int cur_totalCols = block_decompose(n, q, curPos[1]);
+    
+
+    //First  step - distribute data to the first cloumn
+    MPI_Comm comm_col;
+    MPI_Comm_split(comm, curPos[1], curPos[0], &comm_col);
+    
+    int *row_sc = new int [q], *row_disp = new int[q];
+    for (int i = 0; i < q; i++){
+        row_sc[i] = n * block_decompose(n, q, i);
+        row_disp[i] = (i == 0) ? 0 : row_sc[i-1] + row_disp[i-1];
+    }
+
+    double *rec_buffer_EntireRow = new double[cur_totalRows * n];
+    if (curPos[1] == 0){
+        
+        MPI_Scatterv(input_matrix, row_sc, row_disp, MPI_DOUBLE,
+                     rec_buffer_EntireRow, cur_totalRows * n, MPI_DOUBLE, 0, comm_col);
+        MPI_Barrier(comm_col);
+    }
+
+    //Second step - distribute data to the entire row
+    MPI_Comm comm_row;
+    MPI_Comm_split(comm, curPos[0], curPos[1], &comm_row);
+
+    int *col_sc = new int[q], *col_disp = new int[q];
+    for (int i = 0; i < q; i++){
+        col_sc[i] = block_decompose(n, q, i);
+        col_disp[i] = (i == 0) ? 0 : col_sc[i-1] + col_disp[i-1];
+    }
+
+    double *rec_buffer_curP = new double[cur_totalCols * cur_totalRows];
+    for (int i = 0; i < cur_totalRows; i++){
+        MPI_Scatterv(rec_buffer_EntireRow + i * n, col_sc, col_disp, MPI_DOUBLE,
+                    rec_buffer_curP + i * cur_totalCols, cur_totalCols, MPI_DOUBLE, 0, comm_row);
+        
+    }
+    MPI_Barrier(comm_row);
+    MPI_Comm_free(&comm_col);
+    MPI_Comm_free(&comm_row);
 }
 
 
