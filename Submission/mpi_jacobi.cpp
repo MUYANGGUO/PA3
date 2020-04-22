@@ -62,15 +62,10 @@ void distribute_vector(const int n, double* input_vector, double** local_vector,
         MPI_Scatterv(input_vector, sendcounts,displs,MPI_DOUBLE,*local_vector,local_size,MPI_DOUBLE,0,col);
 
         free(sendcounts);
-        free(displs);
-
-
-        
+        free(displs); 
     }
     MPI_Comm_free(&col);
     return;
-
-    
 }
 
 
@@ -109,9 +104,6 @@ void gather_vector(const int n, double* local_vector, double* output_vector, MPI
         MPI_Gatherv(local_vector,local_size,MPI_DOUBLE,output_vector,recvcounts,displs,MPI_DOUBLE,0,col);
         free(recvcounts);
         free(displs);
-
-
-        
     }
     MPI_Comm_free(&col);
 
@@ -228,9 +220,6 @@ void transpose_bcast_vector(const int n, double* col_vector, double* row_vector,
 
 }
 
-
-
-
 void distributed_matrix_vector_mult(const int n, double* local_A, double* local_x, double* local_y, MPI_Comm comm)
 {
     // TODO
@@ -280,19 +269,24 @@ void getRD_jacobi(double* R, double* D, int num_row, int num_col,
                 int curPos[2], int diagPos[2],
                 MPI_Comm comm_row, MPI_Comm comm_col, MPI_Comm comm) 
 {
-    //generate D and R matrix, send it to the first column
-    if (curRank != diagRank){
+//generate D and R matrix, send it to the first column
+    if (curPos[0] != curPos[1]){
         //get R matrix
-        for (int i = 0; i < num_row * num_col; i++){
-            R[i] = local_A[i];
+        for (int i = 0; i < num_row; i++){
+            for (int j = 0; j < num_col; j++){
+                R[i*num_col + j] = local_A[i * num_col + j];
+            }
         }
     }else{
         //get R matrix and D matrix
-        for (int i = 0; i < num_row * num_col; i++){
-            if (i % num_col == i / num_col){
-                D[i%num_col] = local_A[i];
-            }else{
-                R[i] = local_A[i];
+        for (int i = 0; i < num_row; i++){
+            for (int j = 0; j < num_col; j++){
+                if (i == j){
+                    D[i] = local_A[i * num_col + j];
+                    R[i * num_col + j] = 0;
+                }else{
+                    R[i * num_col + j] = local_A[i * num_col + j];
+                }
             }
         }
 
@@ -306,123 +300,80 @@ void getRD_jacobi(double* R, double* D, int num_row, int num_col,
     if (curPos[1] == 0){
         MPI_Recv(D, num_col, MPI_DOUBLE, diagRank, 1, comm, MPI_STATUS_IGNORE);  
     }
-    cout<<"\n get RD done \n";
-    return;
 }
 
 // Solves Ax = b using the iterative jacobi method
 void distributed_jacobi(const int n, double* local_A, double* local_b, double* local_x, MPI_Comm comm, int max_iter, double l2_termination)
 {
-    // TODO
-    int dimension[2];
-    int periods[2];
-    int coordinates[2];
-    MPI_Cart_get(comm, 2, dimension, periods, coordinates);
+    //functions: MPI_Comm_rank, MPI_Cart_coords, MPI_Cart_rank
 
-    // rank of coordinate_zero
-    int coordinate_zero[] = {0,0};
-    int rankzero; 
-    MPI_Cart_rank(comm, coordinate_zero, &rankzero);
+    //get current&root rank and current&root position
+    int curRank, rootRank, diagRank;
+    int curPos[2], rootPos[2], diagPos[2];
+    rootPos[0] = 0, rootPos[1] = 0;
+    MPI_Comm_rank(comm, &curRank);
+    MPI_Cart_coords(comm, curRank, 2, curPos);
+    MPI_Cart_rank(comm, rootPos, &rootRank);
 
-    // number of rows or columns
-    int m = dimension[0];
-    int num_rows = block_decompose(n, m, coordinates[0]); 
-    int num_cols = block_decompose(n, m, coordinates[1]); 
+    diagPos[0] = curPos[0], diagPos[1] = curPos[0];
+    MPI_Cart_rank(comm, diagPos, &diagRank);
 
-    // initialize R, diagonal elements as 0, others as A(i,j)
-    double* R = new double[num_rows*num_cols];
-    for (int i = 0; i < num_rows; i++){
-        for (int j = 0; j < num_cols; j++){
-            if (coordinates[0]==coordinates[1] && i==j){
-                R[i*num_cols + j] = 0;
-            }
-            else {
-                R[i*num_cols + j] = local_A[i*num_cols + j];
-            }
-        }
+    //splite mpi_comm into rows and cols
+    MPI_Comm comm_row, comm_col;
+    MPI_Comm_split(comm, curPos[0], curPos[1], &comm_row);
+    MPI_Comm_split(comm, curPos[1], curPos[0], &comm_col);
+
+    //get R and D
+    int num_row = block_decompose(n, comm_row);
+    int num_col = block_decompose(n, comm_col);
+
+    double* R = new double[num_row * num_col];
+    double* D = new double[num_col];
+    
+    getRD_jacobi(R, D, num_row, num_col, local_A,
+                curRank, diagRank, curPos, diagPos, comm_row, comm_col, comm);
+
+    //update x until it converges or reaches to max iteration
+    double* local_Rx = new double[num_row];
+    double* local_Ax = new double[num_row]; 
+    double l2_norm_square, sub_l2_norm_square;
+
+    // initialization 
+    for (int i = 0; i < num_row; i++){
+        local_x[i] = 1;
     }
-        
-    // calculate matrix D = diag(A)
-    MPI_Comm row_comm;
-    MPI_Comm_split(comm, coordinates[0], coordinates[1], &row_comm);
-    MPI_Comm column_comm;
-    MPI_Comm_split(comm, coordinates[1], coordinates[0], &column_comm);
-    double *temp = new double[num_rows];
-    for (int i = 0; i < num_rows; i++) {
-        if (coordinates[0]==coordinates[1]){
-            temp[i] = local_A[i*num_cols + i];
+
+    for (int it = 0; it < max_iter; it++){//
+        //calculate R*x and A*x
+        distributed_matrix_vector_mult(n, R, local_x, local_Rx, comm);
+        distributed_matrix_vector_mult(n, local_A, local_x, local_Ax, comm);
+        // if (curPos[1] == 0){
+        //     for (int i = 0; i < num_col; i++){
+        //         cout<<"The local "<<i <<" num is "<<local_Ax[i]<<endl;
+        //     }
+        // }
+        //detect termination using l2 norm
+        l2_norm_square = 0;
+        sub_l2_norm_square = 0;
+       
+        if (curPos[1] == 0){
+            //get sub l2_norm of this row
+            for (int i = 0; i < num_row; i++){
+                sub_l2_norm_square +=  (local_Ax[i] - local_b[i])*(local_Ax[i] - local_b[i]);
+            }
         }
+        MPI_Reduce(&sub_l2_norm_square, &l2_norm_square, 1, MPI_DOUBLE, MPI_SUM, 0, comm_col);
+
+        MPI_Bcast(&l2_norm_square, 1, MPI_DOUBLE, rootRank, comm);
+        if (sqrt(l2_norm_square) <= l2_termination) break;
         else {
-            temp[i] = 0.0;
+            if (curPos[1] == 0){
+                for (int i = 0; i < num_col; i++){
+                    local_x[i] = (local_b[i] - local_Rx[i])/D[i];
+                }
+            }
         }
-    }
-    double *D_diag = NULL;
-    if (coordinates[1] == 0) {
-        D_diag = new double[num_rows];
-    }
-    MPI_Reduce(temp, D_diag, num_rows, MPI_DOUBLE, MPI_SUM, 0, row_comm);
-
-    // initialize local_x
-    for (int i = 0; i < num_rows; i++){
-        local_x[i] = 0.0;
-    }
-
-    // product of R*x at first column
-    double *sum_Rx = NULL; 
-    if (coordinates[1] == 0){
-        sum_Rx = new double[num_rows];
-    }
-
-    // product of A*x at first column
-    double *sum_Ax = NULL;
-    if (coordinates[1] == 0){
-        sum_Ax = new double[num_rows];
-    }
-
-    // iteration check, continue or stop
-    bool iteration_status = false;
-
-    // iterative calcualtion of x
-    for (int iter = 0; iter < max_iter; iter++)
-    {
-        // calculate product of R*x at first column
-        distributed_matrix_vector_mult(n, R, local_x, sum_Rx, comm);
-
-        // calculate product of A*x at first column
-        distributed_matrix_vector_mult(n, local_A, local_x, sum_Ax, comm);
         
-        // compare the error with l2_termination
-        if (coordinates[1] == 0)
-        {
-            double sum_error = 0;
-            double local_error = 0;
-            for (int i = 0; i < num_rows; i++) {
-                local_error += (sum_Ax[i]-local_b[i])*(sum_Ax[i]-local_b[i]);
-            }
-            // reduce/sum local_error to processor 0
-            MPI_Reduce(&local_error, &sum_error, 1, MPI_DOUBLE, MPI_SUM, 0, column_comm);
-
-            if (coordinates[0] == 0 && sum_error < l2_termination)
-            {
-                iteration_status = true;
-            }
-        }
-
-        // brocast result of iteration check to other processors
-        MPI_Bcast(&iteration_status, 1, MPI::BOOL, rankzero, comm);
-
-        // iteration check, stop or continue
-        if (iteration_status)
-        {
-            break;
-        }
-        else if (coordinates[1] == 0) 
-        {
-            // update local_x with D^(-1)*(b-R*x)
-            for (int i = 0; i < num_rows; i++) {
-                local_x[i] = (local_b[i]-sum_Rx[i]) / D_diag[i];
-            }
-        }
     }
 }
 
