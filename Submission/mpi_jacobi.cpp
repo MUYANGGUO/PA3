@@ -214,6 +214,7 @@ void transpose_bcast_vector(const int n, double* col_vector, double* row_vector,
     MPI_Comm_split(comm, coord_j, coord_i, &cols);
     MPI_Bcast(row_vector, local_n, MPI_DOUBLE, coord_j, cols);
 
+
     MPI_Comm_free(&cols);
 
     return;
