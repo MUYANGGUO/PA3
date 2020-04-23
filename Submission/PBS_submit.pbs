@@ -1,5 +1,5 @@
 #PBS -N PA3
-#PBS -l nodes=8:ppn=14
+#PBS -l nodes=4:ppn=14
 #PBS -l walltime=00:30:00
 #PBS -l mem=40gb
 #PBS -q coc-ice-multi
