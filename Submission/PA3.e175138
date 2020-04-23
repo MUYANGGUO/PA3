@@ -1,0 +1,83 @@
+mpi_gtest.cpp: In function ‘int main(int, char**)’:
+mpi_gtest.cpp:119:9: warning: variable ‘result’ set but not used [-Wunused-but-set-variable]
+     int result = 0;
+         ^
+[WARNING]: Running the sequential solver. Start with mpirun to execute the parallel version.
+29.5007
+4.52592
+2.18038
+1.33667
+1.14343
+3.20569
+[28] Failed to dealloc pd (Device or resource busy)
+[31] Failed to dealloc pd (Device or resource busy)
+[33] Failed to dealloc pd (Device or resource busy)
+[29] Failed to dealloc pd (Device or resource busy)
+[32] Failed to dealloc pd (Device or resource busy)
+[30] Failed to dealloc pd (Device or resource busy)
+[2] Failed to dealloc pd (Device or resource busy)
+[4] Failed to dealloc pd (Device or resource busy)
+[3] Failed to dealloc pd (Device or resource busy)
+[5] Failed to dealloc pd (Device or resource busy)
+[1] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+0.793047
+[33] Failed to dealloc pd (Device or resource busy)
+[32] Failed to dealloc pd (Device or resource busy)
+[29] Failed to dealloc pd (Device or resource busy)
+[31] Failed to dealloc pd (Device or resource busy)
+[34] Failed to dealloc pd (Device or resource busy)
+[30] Failed to dealloc pd (Device or resource busy)
+[28] Failed to dealloc pd (Device or resource busy)
+[2] Failed to dealloc pd (Device or resource busy)
+[6] Failed to dealloc pd (Device or resource busy)
+[1] Failed to dealloc pd (Device or resource busy)
+[5] Failed to dealloc pd (Device or resource busy)
+[4] Failed to dealloc pd (Device or resource busy)
+[3] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+8.38211
+[57] Failed to dealloc pd (Device or resource busy)
+[61] Failed to dealloc pd (Device or resource busy)
+[62] Failed to dealloc pd (Device or resource busy)
+[59] Failed to dealloc pd (Device or resource busy)
+[58] Failed to dealloc pd (Device or resource busy)
+[60] Failed to dealloc pd (Device or resource busy)
+[63] Failed to dealloc pd (Device or resource busy)
+[56] Failed to dealloc pd (Device or resource busy)
+[33] Failed to dealloc pd (Device or resource busy)
+[35] Failed to dealloc pd (Device or resource busy)
+[1] Failed to dealloc pd (Device or resource busy)
+[7] Failed to dealloc pd (Device or resource busy)
+[6] Failed to dealloc pd (Device or resource busy)
+[30] Failed to dealloc pd (Device or resource busy)
+[3] Failed to dealloc pd (Device or resource busy)
+[2] Failed to dealloc pd (Device or resource busy)
+[34] Failed to dealloc pd (Device or resource busy)
+[31] Failed to dealloc pd (Device or resource busy)
+[4] Failed to dealloc pd (Device or resource busy)
+[29] Failed to dealloc pd (Device or resource busy)
+[5] Failed to dealloc pd (Device or resource busy)
+[28] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+0.00543322
+0.0106717
+0.0248687
+1.3398
+5.29866
+12.1188
+0.420372
+0.580702
+0.712672
+[mpiexec@rich133-k40-20-r.pace.gatech.edu] HYDT_bscd_pbs_wait_for_completion (tools/bootstrap/external/pbs_wait.c:67): tm_poll(obit_event) failed with TM error 17002
+[mpiexec@rich133-k40-20-r.pace.gatech.edu] HYDT_bsci_wait_for_completion (tools/bootstrap/src/bsci_wait.c:23): launcher returned error waiting for completion
+[mpiexec@rich133-k40-20-r.pace.gatech.edu] HYD_pmci_wait_for_completion (pm/pmiserv/pmiserv_pmci.c:218): launcher returned error waiting for completion
+[mpiexec@rich133-k40-20-r.pace.gatech.edu] main (ui/mpich/mpiexec.c:344): process manager error waiting for completion
+0.884276
+1.07747
+1.32618
+1.66161
+1.78377
+1.78686
+1.78652
+1.97091
