@@ -1,0 +1,60 @@
+mpi_gtest.cpp: In function ‘int main(int, char**)’:
+mpi_gtest.cpp:119:9: warning: variable ‘result’ set but not used [-Wunused-but-set-variable]
+     int result = 0;
+         ^
+[WARNING]: Running the sequential solver. Start with mpirun to execute the parallel version.
+29.3685
+1.56331
+0.824826
+1.15443
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+0.763423
+[15] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+1.88265
+[0] Failed to dealloc pd (Device or resource busy)
+[18] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+0.0352789
+[14] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+0.0043154
+0.0188476
+[14] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+1.14691
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+0.828709
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] HYDT_bscd_pbs_wait_for_completion (tools/bootstrap/external/pbs_wait.c:67): tm_poll(obit_event) failed with TM error 17002
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] HYDT_bsci_wait_for_completion (tools/bootstrap/src/bsci_wait.c:23): launcher returned error waiting for completion
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] HYD_pmci_wait_for_completion (pm/pmiserv/pmiserv_pmci.c:218): launcher returned error waiting for completion
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] main (ui/mpich/mpiexec.c:344): process manager error waiting for completion
+0.870722
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] HYDT_bscd_pbs_wait_for_completion (tools/bootstrap/external/pbs_wait.c:39): tm_poll(obit_event) failed with TM error 17001
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] HYDT_bsci_wait_for_completion (tools/bootstrap/src/bsci_wait.c:23): launcher returned error waiting for completion
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] HYD_pmci_wait_for_completion (pm/pmiserv/pmiserv_pmci.c:218): launcher returned error waiting for completion
+[mpiexec@rich133-k40-24-r.pace.gatech.edu] main (ui/mpich/mpiexec.c:344): process manager error waiting for completion
+0.925043
+0.958021
+1.01927
+1.14234
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+1.25149
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+1.37489
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+1.57748
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+1.79639
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
+2.06672
+[0] Failed to dealloc pd (Device or resource busy)
+[14] Failed to dealloc pd (Device or resource busy)
