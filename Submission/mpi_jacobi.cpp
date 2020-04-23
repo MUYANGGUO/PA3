@@ -271,6 +271,9 @@ void distributed_matrix_vector_mult(const int n, double* local_A, double* local_
 
     //calculate local_y, by reducing
     MPI_Reduce(Ax, local_y, local_rows, MPI_DOUBLE,MPI_SUM,0,rows);
+
+    MPI_Comm_free(&cols);
+    MPI_Comm_free(&rows);
 }
 
 void getRD_jacobi(double* R, double* D, int num_row, int num_col, 
