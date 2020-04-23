@@ -175,48 +175,52 @@ void distribute_matrix(const int n, double* input_matrix, double** local_matrix,
 void transpose_bcast_vector(const int n, double* col_vector, double* row_vector, MPI_Comm comm)
 {
     // TODO
-    // retrieve Cartesian topology information
-    int dimension[2];
-    int periods[2];
-    int coordinates[2];
-    MPI_Cart_get(comm, 2, dimension, periods, coordinates);
+    int rank, size;
+    MPI_Comm_rank(comm,&rank);
+    MPI_Comm_size(comm,&size);
 
-    // number of rows or columns
-    int m = dimension[0];
-    int num_rows = block_decompose(n, m, coordinates[0]);
-    int num_cols = block_decompose(n, m, coordinates[1]); 
+    int q = sqrt(size);
+    //coords: i,j
+    int coord_i = rank / q;
+    int coord_j = rank % q;
+    int local_m = block_decompose(n, q, coord_i);
+    int local_n = block_decompose(n, q, coord_j); 
     
-    // send local data to diagonal processors from first column
-    // processor(0,0)
-    if (coordinates[0] == 0 && coordinates[1] == 0)
+    //send col_vector to processor at each column's diagonal position
+    //meaning from each in first column (i,0), send to (i,i) respectively. to avoid deadlock, specify (0,0) at the start
+    //And diagonal processors from (i,i) should receive it.
+    if (rank == 0)
     {
-        for (int i = 0; i < num_rows; i++) {
+        for (int i = 0; i < local_m; i++) {
             row_vector[i] = col_vector[i];
         }
     }
-    // other processors in first column
-    else if (coordinates[1] == 0)
+    // send to diagonals
+    else if (coord_j == 0)
     {
-        int diag_coordinates[] = {coordinates[0], coordinates[0]};
-        int diag_rank; 
-        MPI_Cart_rank(comm, diag_coordinates, &diag_rank);
-        MPI_Send(&col_vector[0], num_rows, MPI_DOUBLE, diag_rank, 1, comm);
+        int send_coords[] = {coord_i, coord_i};
+        int send_rank; 
+        MPI_Cart_rank(comm, send_coords, &send_rank);
+        MPI_Send(&col_vector[0], local_m, MPI_DOUBLE, send_rank, 1, comm);
     }
-    // disgonal processors receive data
-    else if (coordinates[0] == coordinates[1])
+    // disgonals waiting to receive
+    else if (coord_i == coord_j)
     {
-        int original_coordinates[] = {coordinates[0], 0};
-        int original_rank; 
-        MPI_Cart_rank(comm, original_coordinates, &original_rank);
-        MPI_Recv(&row_vector[0], num_rows, MPI_DOUBLE, original_rank, 1, comm, MPI_STATUS_IGNORE);
+        int recv_coords[] = {coord_i, 0};
+        int recv_rank; 
+        MPI_Cart_rank(comm, recv_coords, &recv_rank);
+        MPI_Recv(&row_vector[0], local_m, MPI_DOUBLE, recv_rank, 1, comm, MPI_STATUS_IGNORE);
     }
 
-    // diagonal processors distribute data along column
-    MPI_Comm column_comm;
-    MPI_Comm_split(comm, coordinates[1], coordinates[0], &column_comm);
-    MPI_Bcast(row_vector, num_cols, MPI_DOUBLE, coordinates[1], column_comm);
-    // release the comm
-    MPI_Comm_free(&column_comm);
+    //Bcast in each column 
+    MPI_Comm cols;
+    MPI_Comm_split(comm, coord_j, coord_i, &cols);
+    MPI_Bcast(row_vector, local_n, MPI_DOUBLE, coord_j, cols);
+
+    MPI_Comm_free(&cols);
+
+    return;
+
 }
 
 

@@ -1,0 +1,28 @@
+#PBS -N PA3
+#PBS -l nodes=4:ppn=14
+#PBS -l walltime=00:30:00
+#PBS -l mem=40gb
+#PBS -q coc-ice-multi
+#PBS -o PA3.out
+
+cd /nv/coc-ice/mguo34/cse6220/PA3/Submission
+module load gcc/4.9.0
+module load mvapich2/2.2
+make clean
+make all
+
+for p in 1 4 9 16 25 36 
+do
+    mpirun -np $p ./jacobi -n 10000 
+done 
+
+for n in 10 100 1000 10000 
+do
+    mpirun -np 16 ./jacobi -n $n 
+done 
+
+for d in 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
+do
+    mpirun -np 16 ./jacobi -n 10000 -d $d
+done 
+
