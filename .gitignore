@@ -1,7 +1,3 @@
-# system
-.vscode
-.Rhistory
-
 # binary inputs
 *.bin
 
