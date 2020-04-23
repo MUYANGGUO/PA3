@@ -14,15 +14,15 @@ make all
 for p in 1 4 9 16 25 36 
 do
     mpirun -np $p ./jacobi -n 10000 
-done >> p_output.txt
+done 
 
 for n in 10 100 1000 10000 
 do
     mpirun -np 16 ./jacobi -n $n 
-done >> n_output.txt
+done 
 
 for d in 0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0
 do
     mpirun -np 16 ./jacobi -n 10000 -d $d
-done >> d_output.txt
+done 
 
