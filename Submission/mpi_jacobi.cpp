@@ -42,9 +42,11 @@ void distribute_vector(const int n, double* input_vector, double** local_vector,
     //coords: i,j
     int coord_i = rank / q;
     int coord_j = rank % q;
+
     //get local size, use block_decompose function
     int local_size;
     local_size = block_decompose(n,q,coord_i);
+ 
     //distribute from root (0,0), to coord_j = 0, that is (i,0) first column
     if (coord_j == 0){
         int *sendcounts;
@@ -165,6 +167,9 @@ void distribute_matrix(const int n, double* input_matrix, double** local_matrix,
         
     }
     *local_matrix = rec_buffer_curP;
+    // for (int i = 0; i < cur_totalCols * cur_totalRows; i++){
+    //     cout<<"This is processor "<<curPos[0]<<" "<<curPos[1]<<" elemnt "<<i<<" is "<<*(*local_matrix+i)<<endl;
+    // }
 
     MPI_Barrier(comm_row);
     MPI_Comm_free(&comm_col);
@@ -183,20 +188,20 @@ void transpose_bcast_vector(const int n, double* col_vector, double* row_vector,
     //coords: i,j
     int coord_i = rank / q;
     int coord_j = rank % q;
-    int local_m = block_decompose(n, q, coord_i);
-    int local_n = block_decompose(n, q, coord_j); 
+    int local_m = block_decompose(n, q, coord_i);//row
+    int local_n = block_decompose(n, q, coord_j);//col
     
     //send col_vector to processor at each column's diagonal position
     //meaning from each in first column (i,0), send to (i,i) respectively. to avoid deadlock, specify (0,0) at the start
     //And diagonal processors from (i,i) should receive it.
-    if (rank == 0)
+    if (coord_j == 0 && coord_i == 0)
     {
         for (int i = 0; i < local_m; i++) {
             row_vector[i] = col_vector[i];
         }
     }
     // send to diagonals
-    else if (coord_j == 0)
+    else if (coord_j == 0 )
     {
         int send_coords[] = {coord_i, coord_i};
         int send_rank; 
@@ -244,30 +249,34 @@ void distributed_matrix_vector_mult(const int n, double* local_A, double* local_
 
     //calculate local matrix, m x n in terms of size and allocate memory acccordingly
     int local_rows, local_cols;
-    local_rows = block_decompose(n,rows);
-    local_cols = block_decompose(n,cols);
+    local_rows = block_decompose(n, q, coord_i);
+    local_cols = block_decompose(n, q, coord_j);
 
     //transpose the local_x from (0,1) to every col
-    double *x_t;
-    x_t = (double*)malloc(sizeof(double)*local_rows);
+    double *x_t = new double[local_cols]; 
     transpose_bcast_vector(n,local_x, x_t,comm);
-
-    // cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_x "<<  " is "<< *(local_x+0)<<endl;
+   // cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_x "<<  " is "<< *(local_x+0)<<endl;
+    
     // if (coord_i == 0 && coord_j == 1){
-    //     for (int i = 0; i < 4; i++){
-    //         cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_A "<< i << " is "<< *(local_A+i)<<endl;
-    //     }
+    //     cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_x "<<  " is "<< *(x_t+0)<<endl;
+    // }
+    // for (int i = 0; i < local_rows * local_cols; i++){
+    //     cout<<"This is "<< coord_i<<" "<< coord_j<< " , local_A "<< i << " is "<< *(local_A+i)<<endl;
     // }
 
     //after transposing, we then could calculate the y = A*x, denote as local_nv;
-    double *Ax;
-    Ax = (double*)malloc(sizeof(double)*local_rows);
+    double *Ax = new double[local_rows];
     for (int i = 0; i<local_rows;i++){
         Ax[i] = 0;
         for (int j = 0; j<local_cols;j++){
-            Ax[i]+=local_A[ local_cols * i + j] * x_t[j];
+            Ax[i] +=local_A[ local_cols * i + j] * x_t[j];
         }
     }
+    // if (coord_i == 0 && coord_j == 1){
+    //     for (int i = 0; i < local_cols; i++){
+    //         cout<<"Ax "<<"This is "<< coord_i<<" "<< coord_j<< " , AX "<< i << " is "<< *(Ax+i)<<endl;
+    //     }
+    // }
 
     //calculate local_y, by reducing
     MPI_Reduce(Ax, local_y, local_rows, MPI_DOUBLE,MPI_SUM,0,rows);
