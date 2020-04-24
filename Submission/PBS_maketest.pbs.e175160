@@ -1,0 +1,8 @@
+mpi_gtest.cpp: In function ‘int main(int, char**)’:
+mpi_gtest.cpp:119:9: warning: variable ‘result’ set but not used [-Wunused-but-set-variable]
+     int result = 0;
+         ^
+[WARNING]: Running the sequential solver. Start with mpirun to execute the parallel version.
+120.428
+[WARNING]: Running the sequential solver. Start with mpirun to execute the parallel version.
+264.548
