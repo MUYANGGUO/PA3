@@ -1,0 +1,79 @@
+mpi_gtest.cpp: In function ‘int main(int, char**)’:
+mpi_gtest.cpp:119:9: warning: variable ‘result’ set but not used [-Wunused-but-set-variable]
+     int result = 0;
+         ^
+[WARNING]: Running the sequential solver. Start with mpirun to execute the parallel version.
+29.3692
+4.25889
+2.28377
+1.32747
+1.14581
+0.928221
+[28] Failed to dealloc pd (Device or resource busy)
+[29] Failed to dealloc pd (Device or resource busy)
+[31] Failed to dealloc pd (Device or resource busy)
+[33] Failed to dealloc pd (Device or resource busy)
+[32] Failed to dealloc pd (Device or resource busy)
+[30] Failed to dealloc pd (Device or resource busy)
+[5] Failed to dealloc pd (Device or resource busy)
+[1] Failed to dealloc pd (Device or resource busy)
+[3] Failed to dealloc pd (Device or resource busy)
+[4] Failed to dealloc pd (Device or resource busy)
+[2] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+0.845387
+[33] Failed to dealloc pd (Device or resource busy)
+[32] Failed to dealloc pd (Device or resource busy)
+[34] Failed to dealloc pd (Device or resource busy)
+[29] Failed to dealloc pd (Device or resource busy)
+[31] Failed to dealloc pd (Device or resource busy)
+[30] Failed to dealloc pd (Device or resource busy)
+[28] Failed to dealloc pd (Device or resource busy)
+[2] Failed to dealloc pd (Device or resource busy)
+[5] Failed to dealloc pd (Device or resource busy)
+[1] Failed to dealloc pd (Device or resource busy)
+[3] Failed to dealloc pd (Device or resource busy)
+[4] Failed to dealloc pd (Device or resource busy)
+[6] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+7.49024
+[60] Failed to dealloc pd (Device or resource busy)
+[61] Failed to dealloc pd (Device or resource busy)
+[57] Failed to dealloc pd (Device or resource busy)
+[62] Failed to dealloc pd (Device or resource busy)
+[59] Failed to dealloc pd (Device or resource busy)
+[63] Failed to dealloc pd (Device or resource busy)
+[58] Failed to dealloc pd (Device or resource busy)
+[56] Failed to dealloc pd (Device or resource busy)
+[6] Failed to dealloc pd (Device or resource busy)
+[35] Failed to dealloc pd (Device or resource busy)
+[34] Failed to dealloc pd (Device or resource busy)
+[4] Failed to dealloc pd (Device or resource busy)
+[7] Failed to dealloc pd (Device or resource busy)
+[3] Failed to dealloc pd (Device or resource busy)
+[2] Failed to dealloc pd (Device or resource busy)
+[33] Failed to dealloc pd (Device or resource busy)
+[30] Failed to dealloc pd (Device or resource busy)
+[1] Failed to dealloc pd (Device or resource busy)
+[28] Failed to dealloc pd (Device or resource busy)
+[5] Failed to dealloc pd (Device or resource busy)
+[29] Failed to dealloc pd (Device or resource busy)
+[31] Failed to dealloc pd (Device or resource busy)
+[0] Failed to dealloc pd (Device or resource busy)
+0.00503914
+0.269775
+0.0243534
+1.32807
+5.2986
+12.1039
+0.411918
+0.569327
+0.711134
+0.881059
+1.07924
+1.33488
+1.62713
+1.93232
+1.78303
+1.77591
+1.77961
